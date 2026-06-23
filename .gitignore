@@ -3,3 +3,6 @@ obj/
 *.user
 *.suo
 searchengine.dll
+*.DotSettings.user
+.DS_Store
+Thumbs.db
