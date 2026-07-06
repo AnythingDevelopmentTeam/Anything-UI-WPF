@@ -24,7 +24,12 @@ public partial class MainWindow : FluentWindow
             if (savedLang != null)
                 _lang.SetLanguage(savedLang);
 
-            DataContext = new MainViewModel(_lang);
+            var vm = new MainViewModel(_lang);
+            var savedTheme = AppConfig.LoadTheme();
+            if (savedTheme.HasValue)
+                vm.IsDarkTheme = savedTheme.Value;
+
+            DataContext = vm;
             InitializeComponent();
 
             ((MainViewModel)DataContext).OpenSettingsRequested += OpenSettings;

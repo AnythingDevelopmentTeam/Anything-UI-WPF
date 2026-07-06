@@ -58,6 +58,35 @@ public static class AppConfig
 
     public static void SaveLanguage(string code)
     {
+        SaveSetting("language", code);
+    }
+
+    public static bool? LoadTheme()
+    {
+        var val = LoadSetting("theme");
+        if (val == null) return null;
+        return bool.TryParse(val, out var result) ? result : null;
+    }
+
+    public static void SaveTheme(bool isDark)
+    {
+        SaveSetting("theme", isDark.ToString().ToLower());
+    }
+
+    private static string? LoadSetting(string key)
+    {
+        try
+        {
+            if (!File.Exists(SettingsPath)) return null;
+            var json = File.ReadAllText(SettingsPath);
+            var settings = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+            return settings?.GetValueOrDefault(key);
+        }
+        catch { return null; }
+    }
+
+    private static void SaveSetting(string key, string value)
+    {
         try
         {
             Directory.CreateDirectory(ConfigDir);
@@ -71,7 +100,7 @@ public static class AppConfig
             {
                 settings = new();
             }
-            settings["language"] = code;
+            settings[key] = value;
             File.WriteAllText(SettingsPath, System.Text.Json.JsonSerializer.Serialize(settings));
         }
         catch { }

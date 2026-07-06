@@ -58,13 +58,10 @@
                             Icon="Search24"
                             Margin="0,0,8,0"/>
                 <ComboBox Grid.Column="1"
-                          SelectedIndex="0"
+                          SelectedItem="{Binding SearchType}"
                           VerticalAlignment="Center"
-                          MinWidth="90">
-                    <ComboBoxItem>Fuzzy</ComboBoxItem>
-                    <ComboBoxItem>Regex</ComboBoxItem>
-                    <ComboBoxItem>Exact</ComboBoxItem>
-                </ComboBox>
+                          MinWidth="90"
+                          ItemsSource="{Binding SearchTypes}"/>
             </Grid>
         </Border>
 

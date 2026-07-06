@@ -14,23 +14,28 @@ public class MainViewModel : ViewModelBase
     private readonly SearchService _search = new();
     private readonly LanguageService _lang;
     private CancellationTokenSource? _indexCts;
+    private CancellationTokenSource? _searchCts;
     private string _searchQuery = string.Empty;
     private string _statusText = string.Empty;
     private bool _isIndexing;
     private bool _isDarkTheme;
+    private SearchType _searchType = SearchType.Fuzzy;
     private ulong _indexSize;
 
     public LanguageService Lang => _lang;
 
     public ObservableCollection<FileSearchResult> Results { get; } = new();
+    public List<SearchType> SearchTypes { get; } = new() { SearchType.Fuzzy, SearchType.Regex, SearchType.Exact };
 
     public string SearchQuery
     {
         get => _searchQuery;
         set
         {
-            if (SetProperty(ref _searchQuery, value))
-                _ = SearchAsync(value);
+            if (!SetProperty(ref _searchQuery, value)) return;
+            _searchCts?.Cancel();
+            _searchCts = new CancellationTokenSource();
+            _ = SearchAsync(value, _searchCts.Token);
         }
     }
 
@@ -54,6 +59,7 @@ public class MainViewModel : ViewModelBase
             if (SetProperty(ref _isDarkTheme, value))
             {
                 ApplyTheme(value);
+                AppConfig.SaveTheme(value);
                 OnPropertyChanged(nameof(ThemeTooltip));
             }
         }
@@ -63,6 +69,21 @@ public class MainViewModel : ViewModelBase
     {
         get => _indexSize;
         set => SetProperty(ref _indexSize, value);
+    }
+
+    public SearchType SearchType
+    {
+        get => _searchType;
+        set
+        {
+            if (!SetProperty(ref _searchType, value)) return;
+            if (!string.IsNullOrWhiteSpace(_searchQuery))
+            {
+                var cts = new CancellationTokenSource();
+                cts.Cancel();
+                _ = SearchAsync(_searchQuery, cts.Token);
+            }
+        }
     }
 
     public string WindowTitle => _lang["window_title"];
@@ -116,8 +137,17 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    private async Task SearchAsync(string query)
+    private async Task SearchAsync(string query, CancellationToken ct = default)
     {
+        try
+        {
+            await Task.Delay(300, ct);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(query))
         {
             Results.Clear();
@@ -131,7 +161,9 @@ public class MainViewModel : ViewModelBase
             return;
         }
 
-        var results = await Task.Run(() => _search.Search(query));
+        var type = _searchType;
+        var results = await Task.Run(() => _search.Search(query, type), ct);
+        ct.ThrowIfCancellationRequested();
         Results.Clear();
         foreach (var r in results)
             Results.Add(r);
