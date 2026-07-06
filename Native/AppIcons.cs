@@ -10,7 +10,7 @@ internal static class AppIcons
         return new FontIcon
         {
             Glyph = glyph,
-            FontFamily = new FontFamily("Segoe MDL2 Assets"),
+            FontFamily = new System.Windows.Media.FontFamily("Segoe MDL2 Assets"),
             FontSize = size,
         };
     }

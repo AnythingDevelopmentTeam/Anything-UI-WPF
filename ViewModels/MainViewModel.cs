@@ -21,10 +21,12 @@ public class MainViewModel : ViewModelBase
     private bool _isDarkTheme;
     private SearchType _searchType = SearchType.Fuzzy;
     private ulong _indexSize;
+    private bool _showSearchHistory;
 
     public LanguageService Lang => _lang;
 
     public ObservableCollection<FileSearchResult> Results { get; } = new();
+    public ObservableCollection<string> SearchHistory { get; } = new();
     public List<SearchType> SearchTypes { get; } = new() { SearchType.Fuzzy, SearchType.Regex, SearchType.Exact };
 
     public string SearchQuery
@@ -71,6 +73,12 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _indexSize, value);
     }
 
+    public bool ShowSearchHistory
+    {
+        get => _showSearchHistory;
+        set => SetProperty(ref _showSearchHistory, value);
+    }
+
     public SearchType SearchType
     {
         get => _searchType;
@@ -93,14 +101,28 @@ public class MainViewModel : ViewModelBase
     public string LangSearchPlaceholder => _lang["search_placeholder"];
 
     public string ThemeTooltip => IsDarkTheme ? _lang["light_theme"] : _lang["dark_theme"];
+    public string LangContextOpen => _lang["context_open"];
+    public string LangContextOpenFolder => _lang["context_open_folder"];
+    public string LangContextCopyPath => _lang["context_copy_path"];
+    public string LangContextCopyFile => _lang["context_copy_file"];
+    public string LangContextProperties => _lang["context_properties"];
+    public string TrayShow => _lang["tray_show"];
+    public string TrayQuit => _lang["tray_quit"];
 
     public ICommand ToggleThemeCommand { get; }
     public ICommand OpenSettingsCommand { get; }
     public ICommand OpenAboutCommand { get; }
+    public ICommand OpenFileCommand { get; }
     public ICommand OpenFileLocationCommand { get; }
+    public ICommand CopyPathCommand { get; }
+    public ICommand CopyFileCommand { get; }
+    public ICommand ShowPropertiesCommand { get; }
     public ICommand RebuildIndexCommand { get; }
+    public ICommand ToggleSearchHistoryCommand { get; }
+    public ICommand SelectHistoryItemCommand { get; }
 
     public event Action? OpenSettingsRequested;
+    public event Action? CloseRequested;
 
     public MainViewModel(LanguageService lang)
     {
@@ -108,10 +130,24 @@ public class MainViewModel : ViewModelBase
         ToggleThemeCommand = new RelayCommand(_ => IsDarkTheme = !IsDarkTheme);
         OpenSettingsCommand = new RelayCommand(_ => OpenSettingsRequested?.Invoke());
         OpenAboutCommand = new RelayCommand(_ => ShowAbout());
+        OpenFileCommand = new RelayCommand<FileSearchResult>(OpenFile);
         OpenFileLocationCommand = new RelayCommand<FileSearchResult>(OpenFileLocation);
+        CopyPathCommand = new RelayCommand<FileSearchResult>(CopyPath);
+        CopyFileCommand = new RelayCommand<FileSearchResult>(CopyFile);
+        ShowPropertiesCommand = new RelayCommand<FileSearchResult>(ShowProperties);
         RebuildIndexCommand = new RelayCommand(async _ => await StartIndexingAsync());
+        ToggleSearchHistoryCommand = new RelayCommand(_ => ShowSearchHistory = !ShowSearchHistory);
+        SelectHistoryItemCommand = new RelayCommand<string>(query =>
+        {
+            if (!string.IsNullOrEmpty(query))
+            {
+                ShowSearchHistory = false;
+                SearchQuery = query;
+            }
+        });
 
         StatusText = _lang["status_init"];
+        LoadSearchHistory();
         InitializeEngine();
     }
 
@@ -168,6 +204,8 @@ public class MainViewModel : ViewModelBase
         foreach (var r in results)
             Results.Add(r);
 
+        AddSearchEntry(query);
+
         StatusText = results.Count == 0
             ? _lang["status_no_results"]
             : _lang.Format("status_results", ("count", results.Count.ToString()));
@@ -208,6 +246,16 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    private static void OpenFile(FileSearchResult? result)
+    {
+        if (result == null) return;
+        try
+        {
+            Process.Start(new ProcessStartInfo(result.FullPath) { UseShellExecute = true });
+        }
+        catch { }
+    }
+
     private static void OpenFileLocation(FileSearchResult? result)
     {
         if (result == null) return;
@@ -220,6 +268,60 @@ public class MainViewModel : ViewModelBase
             }
             catch { }
         }
+    }
+
+    private static void CopyPath(FileSearchResult? result)
+    {
+        if (result == null) return;
+        try { Clipboard.SetText(result.FullPath); }
+        catch { }
+    }
+
+    private static void CopyFile(FileSearchResult? result)
+    {
+        if (result == null) return;
+        try
+        {
+            var dir = Path.GetDirectoryName(result.FullPath) ?? ".";
+            var dest = Path.Combine(dir, "Copy of " + result.Name);
+            File.Copy(result.FullPath, dest);
+        }
+        catch { }
+    }
+
+    private static void ShowProperties(FileSearchResult? result)
+    {
+        if (result == null) return;
+        try
+        {
+            Process.Start("explorer.exe", $"/properties,\"{result.FullPath}\"");
+        }
+        catch { }
+    }
+
+    private void AddSearchEntry(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return;
+        var existing = SearchHistory.IndexOf(query);
+        if (existing >= 0)
+            SearchHistory.Move(existing, 0);
+        else
+            SearchHistory.Insert(0, query);
+        while (SearchHistory.Count > 20)
+            SearchHistory.RemoveAt(SearchHistory.Count - 1);
+        SaveSearchHistory();
+    }
+
+    private void LoadSearchHistory()
+    {
+        SearchHistory.Clear();
+        foreach (var q in AppConfig.LoadSearchHistory())
+            SearchHistory.Add(q);
+    }
+
+    private void SaveSearchHistory()
+    {
+        AppConfig.SaveSearchHistory(SearchHistory.ToList());
     }
 
     private static void ApplyTheme(bool dark)

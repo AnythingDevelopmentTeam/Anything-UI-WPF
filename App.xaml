@@ -10,8 +10,6 @@
                 <ui:ControlsDictionary/>
             </ResourceDictionary.MergedDictionaries>
 
-            <vm:ThemeIconConverter x:Key="ThemeIconConverter"/>
-            <vm:ThemeTooltipConverter x:Key="ThemeTooltipConverter"/>
             <vm:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>

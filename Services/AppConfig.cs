@@ -44,6 +44,19 @@ public static class AppConfig
         catch { }
     }
 
+    public static List<string> LoadSearchHistory()
+    {
+        var val = LoadSetting("search_history");
+        if (val == null) return new();
+        try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(val) ?? new(); }
+        catch { return new(); }
+    }
+
+    public static void SaveSearchHistory(List<string> history)
+    {
+        SaveSetting("search_history", System.Text.Json.JsonSerializer.Serialize(history));
+    }
+
     public static string? LoadLanguage()
     {
         try

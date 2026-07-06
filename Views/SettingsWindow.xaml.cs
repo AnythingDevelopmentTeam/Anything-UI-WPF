@@ -8,9 +8,11 @@ public partial class SettingsWindow : FluentWindow
 {
     public SettingsViewModel ViewModel => (SettingsViewModel)DataContext;
 
-    public SettingsWindow(LanguageService lang)
+    public SettingsWindow(LanguageService lang, Action? rebuildCallback = null)
     {
         DataContext = new SettingsViewModel(lang);
         InitializeComponent();
+        if (rebuildCallback != null)
+            ViewModel.RebuildIndexRequested += rebuildCallback;
     }
 }

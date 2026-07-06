@@ -95,6 +95,13 @@ public class LanguageService
         ["general"] = "Основные",
         ["excluded_dirs"] = "Исключённые каталоги",
         ["dir_placeholder"] = "/путь/к/каталогу",
+        ["context_open"] = "Открыть",
+        ["context_open_folder"] = "Открыть папку",
+        ["context_copy_path"] = "Копировать путь",
+        ["context_copy_file"] = "Копировать файл",
+        ["context_properties"] = "Свойства",
+        ["tray_show"] = "Показать",
+        ["tray_quit"] = "Выход",
     };
 }
 
